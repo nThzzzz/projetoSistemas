@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package bbs;
+
+option java_package = "br.fei.bbs.proto";
+option java_outer_classname = "BbsProto";
+option java_multiple_files = true;
+
+message Header {
+  string msg_id      = 1;
+  string remetente   = 2;
+  int64  ts_envio_ms = 3;
+  uint64 lamport     = 4;
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  OK                 = 1;
+  NOME_INVALIDO      = 2;
+  USUARIO_EM_USO     = 3;
+  CANAL_JA_EXISTE    = 4;
+  USUARIO_NAO_LOGADO = 5;
+  ERRO_INTERNO       = 6;
+}
+
+message LoginReq {
+}
+
+message LoginRep {
+  Status status  = 1;
+  string detalhe = 2;
+}
+
+message CriarCanalReq {
+  string canal = 1;
+}
+
+message CriarCanalRep {
+  Status status  = 1;
+  string detalhe = 2;
+}
+
+message ListarCanaisReq {
+}
+
+message ListarCanaisRep {
+  Status status          = 1;
+  repeated string canais = 2;
+}
+
+message Envelope {
+  Header header = 1;
+
+  oneof body {
+    LoginReq        login_req         = 2;
+    LoginRep        login_rep         = 3;
+    CriarCanalReq   criar_canal_req   = 4;
+    CriarCanalRep   criar_canal_rep   = 5;
+    ListarCanaisReq listar_canais_req = 6;
+    ListarCanaisRep listar_canais_rep = 7;
+  }
+}
