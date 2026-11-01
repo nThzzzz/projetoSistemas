@@ -1,6 +1,7 @@
 package br.fei.bbs.servidor;
 
 import com.google.gson.Gson;
+import jakarta.validation.constraints.NotNull;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -11,9 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Armazenamento {
-    public record Login(String usuario, long timestamp) {
+    public record Login(@NotNull String usuario, long timestamp) {
     }
-    public record Canal(String nome, String criador, long timestamp) {
+
+    public record Canal(@NotNull String nome, @NotNull String criador, long timestamp) {
     }
 
     private final Gson gson = new Gson();
