@@ -37,7 +37,7 @@ public class Servidor {
                 try {
                     Envelope requisicao = Envelope.parseFrom(dados);
                     System.out.println("[recebido]\n" + requisicao);
-                    resposta = tratar(requisicao);
+                    resposta = processar(requisicao);
                 } catch (InvalidProtocolBufferException e) {
                     resposta = novoEnvelope().build();
                 }
@@ -47,10 +47,19 @@ public class Servidor {
         }
     }
 
-    private Envelope tratar(Envelope requisicao) {
+    private Envelope processar(Envelope requisicao) {
+        try {
+            return tratar(requisicao);
+        } catch (Exception e) {
+            return TratadorDeExcecoes.tratar(requisicao, e, novoEnvelope()).build();
+        }
+    }
+
+    private Envelope tratar(Envelope requisicao) throws Exception {
         Envelope.Builder resposta = novoEnvelope();
         switch (requisicao.getBodyCase()) {
             case LOGIN_REQ -> {
+                
             }
             case CRIAR_CANAL_REQ -> {
             }
