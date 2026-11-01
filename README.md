@@ -6,14 +6,14 @@ Projeto da disciplina de Sistemas Distribuídos: uma versão simplificada de um 
 
 ```
 proto/      definição das mensagens (Protocol Buffers)
-servidor/   servidor em Java (Maven)
+servidor/   servidor em Java (Spring Boot)
 bot/        cliente (bot) em Python
 broker/     broker REQ-REP em Python
 ```
 
 ## Linguagens
 
-- **Java**: servidor
+- **Java (Spring Boot)**: servidor
 - **Python**: bot e broker
 
 ## Serialização

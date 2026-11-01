@@ -2,34 +2,29 @@ package br.fei.bbs.servidor;
 
 import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.Header;
+import br.fei.bbs.servidor.config.ServidorProperties;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 import java.util.UUID;
 
-public class Servidor {
+@Component
+public class Servidor implements CommandLineRunner {
 
-    private final String nome;
-    private final String broker;
+    @Autowired
+    private ServidorProperties propriedades;
 
-    public Servidor(String nome, String broker) {
-        this.nome = nome;
-        this.broker = broker;
-    }
-
-    public static void main(String[] args) {
-        String nome = System.getenv().getOrDefault("SERVER_NAME", "servidor");
-        String broker = System.getenv().getOrDefault("BROKER_ADDR", "tcp://broker:5556");
-        new Servidor(nome, broker).executar();
-    }
-
-    public void executar() {
+    @Override
+    public void run(String... args) {
         try (ZContext contexto = new ZContext()) {
             ZMQ.Socket socket = contexto.createSocket(SocketType.REP);
-            socket.connect(broker);
-            System.out.println(nome + " conectado em " + broker);
+            socket.connect(propriedades.getBroker());
+            System.out.println(propriedades.getNome() + " conectado em " + propriedades.getBroker());
 
             while (!Thread.currentThread().isInterrupted()) {
                 byte[] dados = socket.recv(0);
@@ -59,7 +54,7 @@ public class Servidor {
         Envelope.Builder resposta = novoEnvelope();
         switch (requisicao.getBodyCase()) {
             case LOGIN_REQ -> {
-                
+
             }
             case CRIAR_CANAL_REQ -> {
             }
@@ -74,7 +69,7 @@ public class Servidor {
     private Envelope.Builder novoEnvelope() {
         return Envelope.newBuilder().setHeader(Header.newBuilder()
                 .setMsgId(UUID.randomUUID().toString())
-                .setRemetente(nome)
+                .setRemetente(propriedades.getNome())
                 .setTsEnvioMs(System.currentTimeMillis()));
     }
 }
