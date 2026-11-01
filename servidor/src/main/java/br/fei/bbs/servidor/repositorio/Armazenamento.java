@@ -1,7 +1,14 @@
-package br.fei.bbs.servidor;
+package br.fei.bbs.servidor.repositorio;
 
+import br.fei.bbs.servidor.config.ServidorProperties;
+import br.fei.bbs.servidor.modelo.Canal;
+import br.fei.bbs.servidor.modelo.Login;
 import com.google.gson.Gson;
-import jakarta.validation.constraints.NotNull;
+import jakarta.annotation.PostConstruct;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+import org.springframework.validation.annotation.Validated;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -11,28 +18,32 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
+@Repository
+@Validated
 public class Armazenamento {
-    public record Login(@NotNull String usuario, long timestamp) {
-    }
 
-    public record Canal(@NotNull String nome, @NotNull String criador, long timestamp) {
-    }
+    @Autowired
+    private Gson gson;
 
-    private final Gson gson = new Gson();
-    private final Path logins;
-    private final Path canais;
+    @Autowired
+    private ServidorProperties propriedades;
 
-    public Armazenamento(Path diretorio) throws IOException {
+    private Path logins;
+    private Path canais;
+
+    @PostConstruct
+    void iniciar() throws IOException {
+        Path diretorio = Path.of(propriedades.getDados());
         Files.createDirectories(diretorio);
         logins = diretorio.resolve("logins.jsonl");
         canais = diretorio.resolve("canais.jsonl");
     }
 
-    public synchronized void salvarLogin(Login login) throws IOException {
+    public synchronized void salvarLogin(@Valid Login login) throws IOException {
         anexar(logins, login);
     }
 
-    public synchronized void salvarCanal(Canal canal) throws IOException {
+    public synchronized void salvarCanal(@Valid Canal canal) throws IOException {
         anexar(canais, canal);
     }
 

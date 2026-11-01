@@ -1,4 +1,4 @@
-package br.fei.bbs.servidor;
+package br.fei.bbs.servidor.erro;
 
 import br.fei.bbs.proto.Status;
 import lombok.Getter;

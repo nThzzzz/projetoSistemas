@@ -3,6 +3,8 @@ package br.fei.bbs.servidor;
 import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.Header;
 import br.fei.bbs.servidor.config.ServidorProperties;
+import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
+import br.fei.bbs.servidor.repositorio.Armazenamento;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -18,6 +20,12 @@ public class Servidor implements CommandLineRunner {
 
     @Autowired
     private ServidorProperties propriedades;
+
+    @Autowired
+    private Armazenamento armazenamento;
+
+    @Autowired
+    private TratadorDeExcecoes tratadorDeExcecoes;
 
     @Override
     public void run(String... args) {
@@ -46,7 +54,7 @@ public class Servidor implements CommandLineRunner {
         try {
             return tratar(requisicao);
         } catch (Exception e) {
-            return TratadorDeExcecoes.tratar(requisicao, e, novoEnvelope()).build();
+            return tratadorDeExcecoes.tratar(requisicao, e, novoEnvelope()).build();
         }
     }
 
