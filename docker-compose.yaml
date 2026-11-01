@@ -1,0 +1,44 @@
+x-servidor: &servidor
+  build:
+    context: .
+    dockerfile: servidor/Dockerfile
+  image: bbs-servidor
+  depends_on:
+    - broker
+
+x-bot: &bot
+  build:
+    context: .
+    dockerfile: bot/Dockerfile
+  image: bbs-bot
+  depends_on:
+    - broker
+
+services:
+  broker:
+    build: ./broker
+    image: bbs-broker
+
+  servidor-1:
+    <<: *servidor
+    environment:
+      SERVER_NAME: servidor-1
+      BROKER_ADDR: tcp://broker:5556
+
+  servidor-2:
+    <<: *servidor
+    environment:
+      SERVER_NAME: servidor-2
+      BROKER_ADDR: tcp://broker:5556
+
+  bot-1:
+    <<: *bot
+    environment:
+      BOT_NAME: bot-1
+      BROKER_ADDR: tcp://broker:5555
+
+  bot-2:
+    <<: *bot
+    environment:
+      BOT_NAME: bot-2
+      BROKER_ADDR: tcp://broker:5555
