@@ -1,6 +1,7 @@
 package br.fei.bbs.servidor.modelo;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
-public record Login(@NotNull String usuario, long timestamp) {
+public record Login(@NotBlank @Size(max = 32) String usuario, long timestamp) {
 }

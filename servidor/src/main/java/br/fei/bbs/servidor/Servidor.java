@@ -2,9 +2,11 @@ package br.fei.bbs.servidor;
 
 import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.Header;
+import br.fei.bbs.proto.LoginRep;
+import br.fei.bbs.proto.Status;
 import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
-import br.fei.bbs.servidor.repositorio.Armazenamento;
+import br.fei.bbs.servidor.servico.LoginServico;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -22,7 +24,7 @@ public class Servidor implements CommandLineRunner {
     private ServidorProperties propriedades;
 
     @Autowired
-    private Armazenamento armazenamento;
+    private LoginServico loginServico;
 
     @Autowired
     private TratadorDeExcecoes tratadorDeExcecoes;
@@ -62,7 +64,8 @@ public class Servidor implements CommandLineRunner {
         Envelope.Builder resposta = novoEnvelope();
         switch (requisicao.getBodyCase()) {
             case LOGIN_REQ -> {
-
+                loginServico.entrar(requisicao.getHeader().getRemetente());
+                resposta.setLoginRep(LoginRep.newBuilder().setStatus(Status.OK));
             }
             case CRIAR_CANAL_REQ -> {
             }
