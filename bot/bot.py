@@ -1,4 +1,5 @@
 import os
+import random
 import time
 import uuid
 
@@ -8,6 +9,7 @@ import messages_pb2 as pb
 
 BROKER_ADDR = os.getenv("BROKER_ADDR", "tcp://broker:5555")
 BOT_NAME = os.getenv("BOT_NAME", "bot")
+MINIMO_CANAIS = 5
 
 
 def novo_envelope():
@@ -27,14 +29,37 @@ def requisitar(socket, envelope):
     return resposta
 
 
+def login(socket):
+    while True:
+        envelope = novo_envelope()
+        envelope.login_req.SetInParent()
+        if requisitar(socket, envelope).login_rep.status == pb.OK:
+            return
+        time.sleep(1)
+
+
+def listar_canais(socket):
+    envelope = novo_envelope()
+    envelope.listar_canais_req.SetInParent()
+    return list(requisitar(socket, envelope).listar_canais_rep.canais)
+
+
+def criar_canal(socket, nome):
+    envelope = novo_envelope()
+    envelope.criar_canal_req.canal = nome
+    return requisitar(socket, envelope).criar_canal_rep.status == pb.OK
+
+
 def main():
     contexto = zmq.Context()
     socket = contexto.socket(zmq.REQ)
     socket.connect(BROKER_ADDR)
 
-    envelope = novo_envelope()
-    envelope.login_req.SetInParent()
-    requisitar(socket, envelope)
+    login(socket)
+    while True:
+        if len(listar_canais(socket)) < MINIMO_CANAIS:
+            criar_canal(socket, f"canal-{random.randint(1, 20)}")
+        time.sleep(2)
 
 
 if __name__ == "__main__":
