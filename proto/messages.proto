@@ -21,6 +21,7 @@ enum Status {
   CANAL_JA_EXISTE    = 4;
   USUARIO_NAO_LOGADO = 5;
   ERRO_INTERNO       = 6;
+  CANAL_NAO_EXISTE   = 7;
 }
 
 message LoginReq {
@@ -48,6 +49,22 @@ message ListarCanaisRep {
   repeated string canais = 2;
 }
 
+message PublicarReq {
+  string canal    = 1;
+  string mensagem = 2;
+}
+
+message PublicarRep {
+  Status status  = 1;
+  string detalhe = 2;
+}
+
+message Publicacao {
+  string canal    = 1;
+  string mensagem = 2;
+  string autor    = 3;
+}
+
 message Envelope {
   Header header = 1;
 
@@ -58,5 +75,8 @@ message Envelope {
     CriarCanalRep   criar_canal_rep   = 5;
     ListarCanaisReq listar_canais_req = 6;
     ListarCanaisRep listar_canais_rep = 7;
+    PublicarReq     publicar_req      = 8;
+    PublicarRep     publicar_rep      = 9;
+    Publicacao      publicacao        = 10;
   }
 }
