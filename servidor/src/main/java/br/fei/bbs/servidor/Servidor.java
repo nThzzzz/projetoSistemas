@@ -1,11 +1,14 @@
 package br.fei.bbs.servidor;
 
+import br.fei.bbs.proto.CriarCanalRep;
 import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.Header;
+import br.fei.bbs.proto.ListarCanaisRep;
 import br.fei.bbs.proto.LoginRep;
 import br.fei.bbs.proto.Status;
 import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
+import br.fei.bbs.servidor.servico.CanalServico;
 import br.fei.bbs.servidor.servico.LoginServico;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,9 @@ public class Servidor implements CommandLineRunner {
 
     @Autowired
     private LoginServico loginServico;
+
+    @Autowired
+    private CanalServico canalServico;
 
     @Autowired
     private TratadorDeExcecoes tratadorDeExcecoes;
@@ -68,9 +74,12 @@ public class Servidor implements CommandLineRunner {
                 resposta.setLoginRep(LoginRep.newBuilder().setStatus(Status.OK));
             }
             case CRIAR_CANAL_REQ -> {
+                canalServico.criar(requisicao.getCriarCanalReq().getCanal(), requisicao.getHeader().getRemetente());
+                resposta.setCriarCanalRep(CriarCanalRep.newBuilder().setStatus(Status.OK));
             }
-            case LISTAR_CANAIS_REQ -> {
-            }
+            case LISTAR_CANAIS_REQ -> resposta.setListarCanaisRep(ListarCanaisRep.newBuilder()
+                    .setStatus(Status.OK)
+                    .addAllCanais(canalServico.listar()));
             default -> {
             }
         }
