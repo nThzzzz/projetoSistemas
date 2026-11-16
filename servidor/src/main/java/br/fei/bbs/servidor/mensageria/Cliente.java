@@ -15,7 +15,8 @@ import java.util.Map;
 @Component
 public class Cliente {
 
-    private static final int TEMPO_LIMITE_MS = 2000;
+    private static final int TEMPO_LIMITE_MS = 1500;
+    private static final int TENTATIVAS = 2;
 
     @Autowired
     private Envelopes envelopes;
@@ -24,16 +25,22 @@ public class Cliente {
     private final Map<String, ZMQ.Socket> sockets = new HashMap<>();
 
     public Envelope requisitar(String endereco, Envelope.Builder pedido) {
-        ZMQ.Socket socket = sockets.computeIfAbsent(endereco, this::conectar);
-        Envelope envio = envelopes.finalizar(pedido);
-        socket.send(envio.toByteArray(), 0);
-        System.out.println("[enviado para " + endereco + "]\n" + envio);
-        byte[] dados = socket.recv(0);
-        if (dados == null) {
-            System.out.println("[sem resposta de " + endereco + "]");
+        for (int tentativa = 1; tentativa <= TENTATIVAS; tentativa++) {
+            ZMQ.Socket socket = sockets.computeIfAbsent(endereco, this::conectar);
+            Envelope envio = envelopes.finalizar(pedido);
+            socket.send(envio.toByteArray(), 0);
+            System.out.println("[enviado para " + endereco + "]\n" + envio);
+            byte[] dados = socket.recv(0);
+            if (dados != null) {
+                return ler(endereco, dados);
+            }
+            System.out.println("[sem resposta de " + endereco + "] tentativa " + tentativa + " de " + TENTATIVAS);
             contexto.destroySocket(sockets.remove(endereco));
-            return null;
         }
+        return null;
+    }
+
+    private Envelope ler(String endereco, byte[] dados) {
         try {
             Envelope resposta = envelopes.ler(dados);
             System.out.println("[recebido de " + endereco + "]\n" + resposta);
