@@ -11,6 +11,8 @@ bot/        cliente (bot) em Python
 broker/     broker REQ-REP em Python
 proxy/      proxy PUB-SUB em Python
 referencia/ serviço de referência em Python
+monitor/    monitor das publicações em Python
+testes/     script de verificação automática
 ```
 
 ## Linguagens
@@ -127,6 +129,7 @@ As mensagens entre servidores são atendidas em uma thread separada, para que um
 ### Tempo limite das requisições
 
 - requisições entre servidores e para a referência esperam até 1,5 segundo e são tentadas 2 vezes, recriando o socket entre as tentativas; sem resposta, o servidor considera o destino indisponível e segue atendendo os clientes
+- os sockets do servidor usam um prazo de 2 segundos para o handshake do ZeroMQ (o padrão é 30): se a conexão de um servidor recém-iniciado travar no handshake, ela é refeita rapidamente
 - o bot espera até 10 segundos pela resposta; sem resposta (por exemplo, se o servidor que recebeu a requisição caiu), ele recria o socket e reenvia a requisição
 
 ## Replicação
@@ -185,6 +188,22 @@ docker compose up --build
 
 Nos primeiros segundos, algumas publicações podem não chegar aos bots: no ZeroMQ, o PUB descarta mensagens enviadas antes de a inscrição do SUB chegar até ele (*slow joiner*).
 
+## Monitor
+
+O serviço `monitor` assina todos os tópicos do proxy e mostra as publicações como um chat, uma linha por mensagem, além de avisar quando o coordenador muda. Ele só escuta, sem enviar nada aos servidores. Para acompanhar em outro terminal:
+
+```
+docker compose logs -f monitor
+```
+
+```
+19:23:48.454  ★ novo coordenador: servidor-2 (rank 2)
+19:23:48.554  #canal-3    bot-2: bot distribuidos canal canal  (servidor-1)
+19:23:48.560  #canal-10   bot-1: bot mundo mundo mensagem  (servidor-2)
+```
+
+O horário é o do servidor que publicou (entre parênteses). Logo após a inicialização, os horários podem parecer fora de ordem porque os relógios dos servidores ainda não foram sincronizados pelo algoritmo de Berkeley.
+
 ## Verificação automática
 
 ```
@@ -194,8 +213,9 @@ Nos primeiros segundos, algumas publicações podem não chegar aos bots: no Zer
 O script sobe todo o projeto em um ambiente separado (projeto `bbsteste`, dados em `testes/dados`), executa um cliente de teste dentro da rede do compose e verifica, parte por parte:
 
 - login, criação e listagem de canais, incluindo os erros
-- publicação e recebimento pelo pub/sub, com filtro por canal
-- relógio lógico, serviço de referência, heartbeat e Berkeley
+- publicação e recebimento pelo pub/sub, com filtro por canal, limite de 3 inscrições por bot e mínimo de 5 canais
+- relógio lógico, serviço de referência, heartbeat (incluindo a remoção de um servidor parado) e Berkeley
+- monitor exibindo as publicações e o coordenador
 - eleição: derruba o coordenador, confere que outro assume e que os bots continuam sendo atendidos
 - replicação: religa o servidor derrubado, adiciona um `servidor-3` e confere que todos terminam com os mesmos dados
 
