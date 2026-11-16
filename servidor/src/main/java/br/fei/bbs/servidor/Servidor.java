@@ -9,6 +9,7 @@ import br.fei.bbs.proto.PublicarRep;
 import br.fei.bbs.proto.PublicarReq;
 import br.fei.bbs.proto.Status;
 import br.fei.bbs.servidor.config.ServidorProperties;
+import br.fei.bbs.servidor.coordenacao.Referencia;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
 import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
@@ -47,8 +48,14 @@ public class Servidor implements CommandLineRunner {
     @Autowired
     private TratadorDeExcecoes tratadorDeExcecoes;
 
+    @Autowired
+    private Referencia referencia;
+
+    private long mensagens;
+
     @Override
     public void run(String... args) {
+        referencia.registrar();
         try (ZContext contexto = new ZContext()) {
             ZMQ.Socket socket = contexto.createSocket(SocketType.REP);
             socket.connect(propriedades.getBroker());
@@ -67,6 +74,10 @@ public class Servidor implements CommandLineRunner {
                 Envelope envio = envelopes.finalizar(resposta);
                 socket.send(envio.toByteArray(), 0);
                 System.out.println("[enviado]\n" + envio);
+                if (++mensagens % 10 == 0) {
+                    referencia.heartbeat();
+                    referencia.listar();
+                }
             }
         }
     }
