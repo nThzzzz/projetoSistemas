@@ -126,12 +126,50 @@ As mensagens entre servidores são atendidas em uma thread separada, para que um
 
 ### Tempo limite das requisições
 
-- requisições entre servidores e para a referência esperam até 2 segundos; sem resposta, o servidor segue atendendo os clientes e descarta o socket para criar outro na próxima tentativa
+- requisições entre servidores e para a referência esperam até 1,5 segundo e são tentadas 2 vezes, recriando o socket entre as tentativas; sem resposta, o servidor considera o destino indisponível e segue atendendo os clientes
 - o bot espera até 10 segundos pela resposta; sem resposta (por exemplo, se o servidor que recebeu a requisição caiu), ele recria o socket e reenvia a requisição
+
+## Replicação
+
+### Problema
+
+O broker distribui as requisições dos bots entre os servidores (round-robin), então cada servidor recebe só uma parte dos logins, canais e publicações. Se um servidor para, essa parte do histórico fica inacessível, e um bot que lista os canais vê apenas os canais do servidor que respondeu.
+
+### Método escolhido: replicação ativa com propagação assíncrona
+
+Todos os servidores aceitam escritas, e cada escrita é enviada a todas as outras réplicas:
+
+```mermaid
+sequenceDiagram
+  Bot ->> Servidor A: REQ: PublicarReq
+  Servidor A ->> Servidor A: grava em disco
+  Servidor A ->> Proxy: PUB: [replicacao] Replicacao
+  Proxy ->> Servidor B: [replicacao] Replicacao
+  Servidor B ->> Servidor B: grava em disco
+  Servidor A ->> Bot: REP: PublicarRep OK
+```
+
+1. ao gravar um login, um canal ou uma publicação recebidos de um bot, o servidor publica uma mensagem `Replicacao` (tipo, usuário, canal, mensagem e timestamp) no tópico `replicacao` do proxy
+2. todos os servidores assinam o tópico `replicacao` e gravam os registros recebidos de outros servidores, ignorando os que eles mesmos enviaram
+3. ao iniciar (ou voltar depois de uma queda), o servidor pede o histórico completo a outro servidor disponível da lista da referência (`HistoricoReq`/`HistoricoRep` na porta 5560) e grava os registros que ainda não tem
+
+Com isso, todos os servidores ficam com todos os dados: um bot pode ser atendido por qualquer servidor e a queda de um deles não faz perder o histórico.
+
+### Mudanças em relação ao método visto em aula
+
+- **sem ordem total:** na replicação ativa clássica, as operações precisam chegar a todas as réplicas na mesma ordem (multicast totalmente ordenado). Aqui isso não é necessário porque as operações só acrescentam registros (nenhum login, canal ou publicação é alterado ou removido), então aplicar os mesmos registros em qualquer ordem leva ao mesmo conjunto de dados. Para exibir o histórico em ordem, basta ordenar pelo timestamp de cada registro.
+- **consistência eventual:** a resposta ao bot não espera as outras réplicas gravarem. Por alguns milissegundos, um registro novo pode existir em um servidor e ainda não no outro.
+- **sem duplicatas:** antes de gravar, o servidor compara o registro com os que já tem (todos os campos). Receber o mesmo registro pela replicação e pelo histórico não gera linhas repetidas.
+- **canais criados ao mesmo tempo:** se dois bots criam o mesmo canal em servidores diferentes antes de a replicação chegar, os dois registros são mantidos em todos os servidores, e a listagem mostra o nome uma única vez.
+- **transferência de estado:** foi adicionado o pedido de histórico ao iniciar, porque um servidor que estava desligado não recebe as publicações do tópico `replicacao` enviadas nesse intervalo.
+
+### Adicionando um servidor
+
+Basta acrescentar um serviço no `docker-compose.yaml` com `SERVER_NAME` igual ao nome do serviço (por exemplo, `servidor-3`) e executar `docker compose up -d servidor-3`, sem parar os outros containers. O novo servidor recebe um rank da referência, participa das eleições, passa a receber requisições do broker e copia o histórico de outro servidor.
 
 ## Persistência
 
-Cada servidor grava seus dados no diretório definido por `DATA_DIR` (mapeado para `dados/<nome-do-servidor>` no compose), sem compartilhar arquivos com os outros servidores. O formato é JSON Lines, com um registro por linha, sempre anexado ao final do arquivo:
+Cada servidor grava seus dados no diretório definido por `DATA_DIR` (mapeado para `dados/<nome-do-servidor>` no compose), sem compartilhar arquivos com os outros servidores (o conteúdo é igualado pela replicação). O formato é JSON Lines, com um registro por linha, sempre anexado ao final do arquivo:
 
 - `logins.jsonl`: usuário e timestamp de cada login
 - `canais.jsonl`: nome do canal, usuário que criou e timestamp da criação
