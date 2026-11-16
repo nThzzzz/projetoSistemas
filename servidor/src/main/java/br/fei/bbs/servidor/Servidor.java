@@ -87,16 +87,24 @@ public class Servidor implements CommandLineRunner {
                 Envelope envio = envelopes.finalizar(resposta);
                 socket.send(envio.toByteArray(), 0);
                 System.out.println("[enviado]\n" + envio);
-                if (++mensagens % 10 == 0) {
-                    referencia.heartbeat();
-                    referencia.listar();
-                }
-                if (mensagens % 15 == 0) {
-                    coordenacao.sincronizar();
-                } else {
-                    coordenacao.verificar();
-                }
+                manutencao(++mensagens);
             }
+        }
+    }
+
+    private void manutencao(long mensagens) {
+        try {
+            if (mensagens % 10 == 0) {
+                referencia.heartbeat();
+                referencia.listar();
+            }
+            if (mensagens % 15 == 0) {
+                coordenacao.sincronizar();
+            } else {
+                coordenacao.verificar();
+            }
+        } catch (Exception e) {
+            System.out.println("[erro] manutencao: " + e.getMessage());
         }
     }
 
