@@ -6,6 +6,7 @@ x-servidor: &servidor
   depends_on:
     - broker
     - proxy
+    - referencia
 
 x-bot: &bot
   build:
@@ -37,7 +38,9 @@ services:
       SERVER_NAME: servidor-1
       BROKER_ADDR: tcp://broker:5556
       PROXY_ADDR: tcp://proxy:5557
+      REFERENCIA_ADDR: tcp://referencia:5559
       DATA_DIR: /data
+      CLOCK_DRIFT_MS: -1500
     volumes:
       - ./dados/servidor-1:/data
 
@@ -47,7 +50,9 @@ services:
       SERVER_NAME: servidor-2
       BROKER_ADDR: tcp://broker:5556
       PROXY_ADDR: tcp://proxy:5557
+      REFERENCIA_ADDR: tcp://referencia:5559
       DATA_DIR: /data
+      CLOCK_DRIFT_MS: 2500
     volumes:
       - ./dados/servidor-2:/data
 
