@@ -38,6 +38,7 @@ services:
       SERVER_NAME: servidor-1
       BROKER_ADDR: tcp://broker:5556
       PROXY_ADDR: tcp://proxy:5557
+      PROXY_SUB_ADDR: tcp://proxy:5558
       REFERENCIA_ADDR: tcp://referencia:5559
       DATA_DIR: /data
       CLOCK_DRIFT_MS: -1500
@@ -50,6 +51,7 @@ services:
       SERVER_NAME: servidor-2
       BROKER_ADDR: tcp://broker:5556
       PROXY_ADDR: tcp://proxy:5557
+      PROXY_SUB_ADDR: tcp://proxy:5558
       REFERENCIA_ADDR: tcp://referencia:5559
       DATA_DIR: /data
       CLOCK_DRIFT_MS: 2500
