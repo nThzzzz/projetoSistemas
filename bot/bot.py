@@ -2,21 +2,33 @@ import os
 import random
 import time
 import uuid
+from datetime import datetime
 
 import zmq
 
 import messages_pb2 as pb
 
 BROKER_ADDR = os.getenv("BROKER_ADDR", "tcp://broker:5555")
+PROXY_ADDR = os.getenv("PROXY_ADDR", "tcp://proxy:5558")
 BOT_NAME = os.getenv("BOT_NAME", "bot")
 MINIMO_CANAIS = 5
+MAXIMO_INSCRICOES = 3
+PALAVRAS = ["ola", "mundo", "sistemas", "distribuidos", "zeromq", "canal", "bot", "mensagem", "teste", "servidor"]
+
+
+def agora_ms():
+    return int(time.time() * 1000)
+
+
+def hora(ms):
+    return datetime.fromtimestamp(ms / 1000).strftime("%H:%M:%S.%f")[:-3]
 
 
 def novo_envelope():
     envelope = pb.Envelope()
     envelope.header.msg_id = str(uuid.uuid4())
     envelope.header.remetente = BOT_NAME
-    envelope.header.ts_envio_ms = int(time.time() * 1000)
+    envelope.header.ts_envio_ms = agora_ms()
     return envelope
 
 
@@ -50,16 +62,55 @@ def criar_canal(socket, nome):
     return requisitar(socket, envelope).criar_canal_rep.status == pb.OK
 
 
+def publicar(socket, canal, mensagem):
+    envelope = novo_envelope()
+    envelope.publicar_req.canal = canal
+    envelope.publicar_req.mensagem = mensagem
+    return requisitar(socket, envelope).publicar_rep.status == pb.OK
+
+
+def inscrever(sub, inscritos, canal):
+    sub.setsockopt_string(zmq.SUBSCRIBE, canal)
+    inscritos.add(canal)
+    print(f"[inscrito em {canal}] canais: {sorted(inscritos)}", flush=True)
+
+
+def receber(sub, inscritos, segundos):
+    limite = time.time() + segundos
+    while sub.poll(max(0, int((limite - time.time()) * 1000))):
+        _, dados = sub.recv_multipart()
+        envelope = pb.Envelope()
+        envelope.ParseFromString(dados)
+        if envelope.publicacao.canal in inscritos:
+            print(f"[publicacao em {envelope.publicacao.canal} | envio {hora(envelope.header.ts_envio_ms)}"
+                  f" | recebimento {hora(agora_ms())}]\n{envelope}", flush=True)
+
+
 def main():
     contexto = zmq.Context()
-    socket = contexto.socket(zmq.REQ)
-    socket.connect(BROKER_ADDR)
+    req = contexto.socket(zmq.REQ)
+    req.connect(BROKER_ADDR)
+    sub = contexto.socket(zmq.SUB)
+    sub.connect(PROXY_ADDR)
+    inscritos = set()
 
-    login(socket)
+    login(req)
     while True:
-        if len(listar_canais(socket)) < MINIMO_CANAIS:
-            criar_canal(socket, f"canal-{random.randint(1, 20)}")
-        time.sleep(2)
+        canais = listar_canais(req)
+        if len(canais) < MINIMO_CANAIS:
+            nome = f"canal-{random.randint(1, 20)}"
+            if criar_canal(req, nome):
+                canais.append(nome)
+        if not canais:
+            receber(sub, inscritos, 1)
+            continue
+        livres = [canal for canal in canais if canal not in inscritos]
+        if len(inscritos) < MAXIMO_INSCRICOES and livres:
+            inscrever(sub, inscritos, random.choice(livres))
+        canal = random.choice(canais)
+        for _ in range(10):
+            publicar(req, canal, " ".join(random.choices(PALAVRAS, k=4)))
+            receber(sub, inscritos, 1)
 
 
 if __name__ == "__main__":
