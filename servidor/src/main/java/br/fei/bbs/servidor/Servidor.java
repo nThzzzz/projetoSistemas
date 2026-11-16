@@ -66,6 +66,7 @@ public class Servidor implements CommandLineRunner {
         referencia.registrar();
         coordenacao.iniciar();
         replicador.iniciar();
+        replicador.aguardarConexao();
         replicador.sincronizar();
         coordenacao.sincronizar();
         try (ZContext contexto = new ZContext()) {

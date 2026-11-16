@@ -23,6 +23,8 @@ import org.zeromq.ZMQ;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 @Component
@@ -48,6 +50,8 @@ public class Replicador implements Runnable {
     @Autowired
     private Cliente cliente;
 
+    private final CountDownLatch conectado = new CountDownLatch(1);
+
     public void iniciar() {
         Thread thread = new Thread(this, "replicacao");
         thread.setDaemon(true);
@@ -64,6 +68,13 @@ public class Replicador implements Runnable {
 
     public void replicar(Publicacao publicacao) {
         enviar(paraReplicacao(publicacao));
+    }
+
+    public void aguardarConexao() throws InterruptedException {
+        while (!conectado.await(200, TimeUnit.MILLISECONDS)) {
+            enviar(Replicacao.newBuilder());
+        }
+        System.out.println("[replicacao] conectado ao proxy");
     }
 
     public void sincronizar() throws IOException {
@@ -142,7 +153,9 @@ public class Replicador implements Runnable {
                 sub.recv(0);
                 try {
                     Envelope envelope = envelopes.ler(sub.recv(0));
-                    if (!envelope.getHeader().getRemetente().equals(propriedades.getNome())) {
+                    if (envelope.getHeader().getRemetente().equals(propriedades.getNome())) {
+                        conectado.countDown();
+                    } else {
                         System.out.println("[recebido em " + TOPICO + "]\n" + envelope);
                         aplicar(List.of(envelope.getReplicacao()));
                     }
