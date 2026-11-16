@@ -4,6 +4,7 @@ import br.fei.bbs.proto.CriarCanalRep;
 import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.ListarCanaisRep;
 import br.fei.bbs.proto.LoginRep;
+import br.fei.bbs.proto.PublicarRep;
 import br.fei.bbs.proto.Status;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -29,6 +30,9 @@ public class TratadorDeExcecoes {
                     .setDetalhe(detalhe));
             case LISTAR_CANAIS_REQ -> resposta.setListarCanaisRep(ListarCanaisRep.newBuilder()
                     .setStatus(status));
+            case PUBLICAR_REQ -> resposta.setPublicarRep(PublicarRep.newBuilder()
+                    .setStatus(status)
+                    .setDetalhe(detalhe));
             default -> {
             }
         }

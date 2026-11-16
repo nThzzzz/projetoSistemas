@@ -5,11 +5,16 @@ import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.Header;
 import br.fei.bbs.proto.ListarCanaisRep;
 import br.fei.bbs.proto.LoginRep;
+import br.fei.bbs.proto.Publicacao;
+import br.fei.bbs.proto.PublicarRep;
+import br.fei.bbs.proto.PublicarReq;
 import br.fei.bbs.proto.Status;
 import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
+import br.fei.bbs.servidor.mensageria.Publicador;
 import br.fei.bbs.servidor.servico.CanalServico;
 import br.fei.bbs.servidor.servico.LoginServico;
+import br.fei.bbs.servidor.servico.PublicacaoServico;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -31,6 +36,12 @@ public class Servidor implements CommandLineRunner {
 
     @Autowired
     private CanalServico canalServico;
+
+    @Autowired
+    private PublicacaoServico publicacaoServico;
+
+    @Autowired
+    private Publicador publicador;
 
     @Autowired
     private TratadorDeExcecoes tratadorDeExcecoes;
@@ -80,6 +91,16 @@ public class Servidor implements CommandLineRunner {
             case LISTAR_CANAIS_REQ -> resposta.setListarCanaisRep(ListarCanaisRep.newBuilder()
                     .setStatus(Status.OK)
                     .addAllCanais(canalServico.listar()));
+            case PUBLICAR_REQ -> {
+                PublicarReq pedido = requisicao.getPublicarReq();
+                var registro = publicacaoServico.registrar(pedido.getCanal(), pedido.getMensagem(),
+                        requisicao.getHeader().getRemetente());
+                publicador.publicar(registro.canal(), novoEnvelope().setPublicacao(Publicacao.newBuilder()
+                        .setCanal(registro.canal())
+                        .setMensagem(registro.mensagem())
+                        .setAutor(registro.autor())).build());
+                resposta.setPublicarRep(PublicarRep.newBuilder().setStatus(Status.OK));
+            }
             default -> {
             }
         }
