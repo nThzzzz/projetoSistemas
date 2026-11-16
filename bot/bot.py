@@ -13,6 +13,7 @@ PROXY_ADDR = os.getenv("PROXY_ADDR", "tcp://proxy:5558")
 BOT_NAME = os.getenv("BOT_NAME", "bot")
 MINIMO_CANAIS = 5
 MAXIMO_INSCRICOES = 3
+lamport = 0
 PALAVRAS = ["ola", "mundo", "sistemas", "distribuidos", "zeromq", "canal", "bot", "mensagem", "teste", "servidor"]
 
 
@@ -25,18 +26,28 @@ def hora(ms):
 
 
 def novo_envelope():
+    global lamport
+    lamport += 1
     envelope = pb.Envelope()
     envelope.header.msg_id = str(uuid.uuid4())
     envelope.header.remetente = BOT_NAME
     envelope.header.ts_envio_ms = agora_ms()
+    envelope.header.lamport = lamport
+    return envelope
+
+
+def ler(dados):
+    global lamport
+    envelope = pb.Envelope()
+    envelope.ParseFromString(dados)
+    lamport = max(lamport, envelope.header.lamport)
     return envelope
 
 
 def requisitar(socket, envelope):
     print(f"[enviado]\n{envelope}", flush=True)
     socket.send(envelope.SerializeToString())
-    resposta = pb.Envelope()
-    resposta.ParseFromString(socket.recv())
+    resposta = ler(socket.recv())
     print(f"[recebido]\n{resposta}", flush=True)
     return resposta
 
@@ -79,8 +90,7 @@ def receber(sub, inscritos, segundos):
     limite = time.time() + segundos
     while sub.poll(max(0, int((limite - time.time()) * 1000))):
         _, dados = sub.recv_multipart()
-        envelope = pb.Envelope()
-        envelope.ParseFromString(dados)
+        envelope = ler(dados)
         if envelope.publicacao.canal in inscritos:
             print(f"[publicacao em {envelope.publicacao.canal} | envio {hora(envelope.header.ts_envio_ms)}"
                   f" | recebimento {hora(agora_ms())}]\n{envelope}", flush=True)
