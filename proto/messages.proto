@@ -65,18 +65,51 @@ message Publicacao {
   string autor    = 3;
 }
 
+message RankReq {
+}
+
+message RankRep {
+  int32 rank = 1;
+}
+
+message InfoServidor {
+  string nome = 1;
+  int32  rank = 2;
+}
+
+message ListarServidoresReq {
+}
+
+message ListarServidoresRep {
+  repeated InfoServidor servidores = 1;
+}
+
+message HeartbeatReq {
+}
+
+message HeartbeatRep {
+  Status status  = 1;
+  int64  hora_ms = 2;
+}
+
 message Envelope {
   Header header = 1;
 
   oneof body {
-    LoginReq        login_req         = 2;
-    LoginRep        login_rep         = 3;
-    CriarCanalReq   criar_canal_req   = 4;
-    CriarCanalRep   criar_canal_rep   = 5;
-    ListarCanaisReq listar_canais_req = 6;
-    ListarCanaisRep listar_canais_rep = 7;
-    PublicarReq     publicar_req      = 8;
-    PublicarRep     publicar_rep      = 9;
-    Publicacao      publicacao        = 10;
+    LoginReq            login_req             = 2;
+    LoginRep            login_rep             = 3;
+    CriarCanalReq       criar_canal_req       = 4;
+    CriarCanalRep       criar_canal_rep       = 5;
+    ListarCanaisReq     listar_canais_req     = 6;
+    ListarCanaisRep     listar_canais_rep     = 7;
+    PublicarReq         publicar_req          = 8;
+    PublicarRep         publicar_rep          = 9;
+    Publicacao          publicacao            = 10;
+    RankReq             rank_req              = 11;
+    RankRep             rank_rep              = 12;
+    ListarServidoresReq listar_servidores_req = 13;
+    ListarServidoresRep listar_servidores_rep = 14;
+    HeartbeatReq        heartbeat_req         = 15;
+    HeartbeatRep        heartbeat_rep         = 16;
   }
 }
