@@ -62,10 +62,11 @@ public class Servidor implements CommandLineRunner {
     private long mensagens;
 
     @Override
-    public void run(String... args) {
+    public void run(String... args) throws Exception {
         referencia.registrar();
         coordenacao.iniciar();
         replicador.iniciar();
+        replicador.sincronizar();
         coordenacao.sincronizar();
         try (ZContext contexto = new ZContext()) {
             ZMQ.Socket socket = contexto.createSocket(SocketType.REP);

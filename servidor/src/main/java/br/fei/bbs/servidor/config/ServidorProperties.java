@@ -17,4 +17,8 @@ public class ServidorProperties {
     private String referencia;
     private String dados;
     private long desvio;
+
+    public String endereco(String servidor) {
+        return "tcp://" + servidor + ":" + porta;
+    }
 }

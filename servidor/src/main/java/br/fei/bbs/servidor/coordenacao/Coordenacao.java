@@ -3,6 +3,7 @@ package br.fei.bbs.servidor.coordenacao;
 import br.fei.bbs.proto.Coordenador;
 import br.fei.bbs.proto.EleicaoRep;
 import br.fei.bbs.proto.EleicaoReq;
+import br.fei.bbs.proto.HistoricoRep;
 import br.fei.bbs.proto.Envelope;
 import br.fei.bbs.proto.InfoServidor;
 import br.fei.bbs.proto.RelogioRep;
@@ -13,6 +14,7 @@ import br.fei.bbs.servidor.mensageria.Cliente;
 import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
 import br.fei.bbs.servidor.relogio.Relogio;
+import br.fei.bbs.servidor.replicacao.Replicador;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -48,6 +50,9 @@ public class Coordenacao implements Runnable {
     @Autowired
     private Relogio relogio;
 
+    @Autowired
+    private Replicador replicador;
+
     private volatile String coordenador = "";
     private volatile boolean eleicaoPendente;
     private final Map<String, Long> diferencas = new HashMap<>();
@@ -73,7 +78,7 @@ public class Coordenacao implements Runnable {
             anunciar();
             return;
         }
-        Envelope resposta = cliente.requisitar(endereco(coordenador),
+        Envelope resposta = cliente.requisitar(propriedades.endereco(coordenador),
                 Envelope.newBuilder().setRelogioReq(RelogioReq.getDefaultInstance()));
         if (resposta == null) {
             eleicao();
@@ -90,7 +95,7 @@ public class Coordenacao implements Runnable {
         boolean respondeu = false;
         for (InfoServidor servidor : referencia.listar()) {
             if (servidor.getRank() > referencia.getRank()) {
-                respondeu |= cliente.requisitar(endereco(servidor.getNome()),
+                respondeu |= cliente.requisitar(propriedades.endereco(servidor.getNome()),
                         Envelope.newBuilder().setEleicaoReq(EleicaoReq.getDefaultInstance())) != null;
             }
         }
@@ -139,6 +144,8 @@ public class Coordenacao implements Runnable {
             switch (pedido.getBodyCase()) {
                 case RELOGIO_REQ -> resposta.setRelogioRep(RelogioRep.newBuilder()
                         .setHoraMs(berkeley(pedido.getHeader().getRemetente(), pedido.getHeader().getTsEnvioMs())));
+                case HISTORICO_REQ -> resposta.setHistoricoRep(HistoricoRep.newBuilder()
+                        .addAllRegistros(replicador.historico()));
                 case ELEICAO_REQ -> {
                     resposta.setEleicaoRep(EleicaoRep.newBuilder().setStatus(Status.OK));
                     eleicaoPendente = true;
@@ -146,8 +153,8 @@ public class Coordenacao implements Runnable {
                 default -> {
                 }
             }
-        } catch (InvalidProtocolBufferException e) {
-            System.out.println("[erro] mensagem invalida de servidor");
+        } catch (Exception e) {
+            System.out.println("[erro] mensagem de servidor: " + e.getMessage());
         }
         Envelope envio = envelopes.finalizar(resposta);
         rep.send(envio.toByteArray(), 0);
@@ -183,9 +190,5 @@ public class Coordenacao implements Runnable {
         diferencas.put(servidor, 0L);
         System.out.println("[berkeley] media de " + media + " ms entre " + (diferencas.size() + 1) + " relogios");
         return relogio.agora();
-    }
-
-    private String endereco(String servidor) {
-        return "tcp://" + servidor + ":" + propriedades.getPorta();
     }
 }

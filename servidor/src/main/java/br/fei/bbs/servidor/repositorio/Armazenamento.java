@@ -17,7 +17,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 @Validated
@@ -54,16 +56,40 @@ public class Armazenamento {
         anexar(publicacoes, publicacao);
     }
 
-    public List<Login> carregarLogins() throws IOException {
+    public synchronized int mesclarLogins(List<Login> registros) throws IOException {
+        return mesclar(logins, Login.class, registros);
+    }
+
+    public synchronized int mesclarCanais(List<Canal> registros) throws IOException {
+        return mesclar(canais, Canal.class, registros);
+    }
+
+    public synchronized int mesclarPublicacoes(List<Publicacao> registros) throws IOException {
+        return mesclar(publicacoes, Publicacao.class, registros);
+    }
+
+    public synchronized List<Login> carregarLogins() throws IOException {
         return ler(logins, Login.class);
     }
 
-    public List<Canal> carregarCanais() throws IOException {
+    public synchronized List<Canal> carregarCanais() throws IOException {
         return ler(canais, Canal.class);
     }
 
-    public List<Publicacao> carregarPublicacoes() throws IOException {
+    public synchronized List<Publicacao> carregarPublicacoes() throws IOException {
         return ler(publicacoes, Publicacao.class);
+    }
+
+    private <T> int mesclar(Path arquivo, Class<T> tipo, List<T> registros) throws IOException {
+        Set<T> existentes = new HashSet<>(ler(arquivo, tipo));
+        int novos = 0;
+        for (T registro : registros) {
+            if (existentes.add(registro)) {
+                anexar(arquivo, registro);
+                novos++;
+            }
+        }
+        return novos;
     }
 
     private void anexar(Path arquivo, Object registro) throws IOException {
