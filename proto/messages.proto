@@ -126,6 +126,13 @@ message Replicacao {
   int64        timestamp = 5;
 }
 
+message HistoricoReq {
+}
+
+message HistoricoRep {
+  repeated Replicacao registros = 1;
+}
+
 message Envelope {
   Header header = 1;
 
@@ -151,5 +158,7 @@ message Envelope {
     EleicaoRep          eleicao_rep           = 20;
     Coordenador         coordenador           = 21;
     Replicacao          replicacao            = 22;
+    HistoricoReq        historico_req         = 23;
+    HistoricoRep        historico_rep         = 24;
   }
 }
