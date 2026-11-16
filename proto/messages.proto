@@ -111,6 +111,21 @@ message Coordenador {
   int32  rank = 2;
 }
 
+enum TipoRegistro {
+  TIPO_REGISTRO_UNSPECIFIED = 0;
+  LOGIN                     = 1;
+  CANAL                     = 2;
+  PUBLICACAO                = 3;
+}
+
+message Replicacao {
+  TipoRegistro tipo      = 1;
+  string       usuario   = 2;
+  string       canal     = 3;
+  string       mensagem  = 4;
+  int64        timestamp = 5;
+}
+
 message Envelope {
   Header header = 1;
 
@@ -135,5 +150,6 @@ message Envelope {
     EleicaoReq          eleicao_req           = 19;
     EleicaoRep          eleicao_rep           = 20;
     Coordenador         coordenador           = 21;
+    Replicacao          replicacao            = 22;
   }
 }
