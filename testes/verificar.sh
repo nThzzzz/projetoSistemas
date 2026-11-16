@@ -67,7 +67,7 @@ inscricoes_ok() {
 }
 
 canais_suficientes() {
-    [ "$(grep -o '"nome":"[^"]*"' "$DADOS/servidor-1/canais.jsonl" | sort -u | wc -l)" -ge 5 ]
+    [ "$(grep -o '"nome": "[^"]*"' "$DADOS/servidor-1/canais.json" | sort -u | wc -l)" -ge 5 ]
 }
 
 recuperou_historico() {
@@ -81,9 +81,9 @@ recebendo() {
 dados_iguais() {
     for arquivo in logins canais publicacoes; do
         local base
-        base=$(sort "$DADOS/servidor-1/$arquivo.jsonl" | cksum)
+        base=$(cksum < "$DADOS/servidor-1/$arquivo.json")
         for servidor in servidor-2 servidor-3; do
-            [ "$base" = "$(sort "$DADOS/$servidor/$arquivo.jsonl" | cksum)" ] || return 1
+            [ "$base" = "$(cksum < "$DADOS/$servidor/$arquivo.json")" ] || return 1
         done
     done
 }
@@ -119,9 +119,10 @@ FALHAS=$((FALHAS + $(grep -c '❌' "$SAIDA")))
 rm -f "$SAIDA"
 
 echo "Partes 1 a 3: logs e arquivos"
-verificar "logins dos bots gravados com timestamp" grep -qE '"usuario":"bot-1","timestamp":[0-9]+' "$DADOS"/servidor-1/logins.jsonl
-verificar "canais gravados em disco" test -s "$DADOS/servidor-1/canais.jsonl"
-verificar "publicacoes gravadas em disco" test -s "$DADOS/servidor-1/publicacoes.jsonl"
+verificar "logins dos bots gravados com data" grep -qE '"usuario": "bot-1"' "$DADOS"/servidor-1/logins.json
+verificar "registros com data legivel e timestamp" grep -qE '"data": "[0-9]{2}/[0-9]{2}/[0-9]{4} ' "$DADOS"/servidor-1/logins.json
+verificar "canais gravados em disco" test -s "$DADOS/servidor-1/canais.json"
+verificar "publicacoes gravadas em disco" test -s "$DADOS/servidor-1/publicacoes.json"
 verificar "bot-1 se inscreve em 1 a 3 canais" inscricoes_ok bot-1
 verificar "bot-2 se inscreve em 1 a 3 canais" inscricoes_ok bot-2
 verificar "bots criam canais ate existirem pelo menos 5" esperar_ate 30 canais_suficientes

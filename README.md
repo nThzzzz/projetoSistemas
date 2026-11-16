@@ -42,13 +42,13 @@ Os dados de cada servidor ficam em `dados/servidor-N/`.
 
 - **Linguagens:** Java com Spring Boot no servidor e Python no bot e nos serviços auxiliares. O Spring Boot é usado para organizar o servidor (injeção de dependências, configuração por variáveis de ambiente e validação dos dados); a comunicação é toda feita com ZeroMQ, sem HTTP.
 - **Serialização:** Protocol Buffers (`proto/messages.proto`), em binário. Toda mensagem vai num `Envelope` com um cabeçalho que tem o id da mensagem, o remetente, o timestamp do envio e o relógio lógico.
-- **Persistência:** cada servidor grava arquivos JSON Lines (um registro por linha): `logins.jsonl`, `canais.jsonl` e `publicacoes.jsonl`, sempre com o timestamp de cada registro.
+- **Persistência:** cada servidor grava arquivos JSON formatados, em ordem de horário: `logins.json`, `canais.json` e `publicacoes.json`. Cada registro tem a data legível (horário de Brasília) e o timestamp em milissegundos. A gravação é feita num arquivo temporário que depois substitui o original, para o arquivo nunca ficar pela metade.
 
 ## Como funciona
 
 **Login e canais.** O bot faz login (repete se der erro), lista os canais e cria um novo se houver menos de 5. Nomes vazios ou inválidos retornam `NOME_INVALIDO` e canais repetidos retornam `CANAL_JA_EXISTE`.
 
-**Publicação.** O bot envia a mensagem ao servidor, que grava em `publicacoes.jsonl`, publica no proxy usando o nome do canal como tópico e então responde `OK`. Cada bot se inscreve em até 3 canais, mostra o que recebe (canal, mensagem, horário do envio e do recebimento) e, em loop, escolhe um canal e envia 10 mensagens, uma por segundo.
+**Publicação.** O bot envia a mensagem ao servidor, que grava em `publicacoes.json`, publica no proxy usando o nome do canal como tópico e então responde `OK`. Cada bot se inscreve em até 3 canais, mostra o que recebe (canal, mensagem, horário do envio e do recebimento) e, em loop, escolhe um canal e envia 10 mensagens, uma por segundo.
 
 **Relógios.** Todas as mensagens levam um relógio lógico de Lamport. O serviço de referência dá um rank a cada servidor e recebe um heartbeat a cada 10 mensagens; quem fica 30 segundos sem enviar sai da lista. A cada 15 mensagens, os servidores acertam o relógio com o coordenador pelo algoritmo de Berkeley (média dos relógios). Para isso ficar visível, os servidores começam com os relógios desajustados de propósito.
 
