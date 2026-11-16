@@ -12,6 +12,8 @@ public class ServidorProperties {
     private String nome;
     private String broker;
     private String proxy;
+    private String proxySub;
+    private int porta;
     private String referencia;
     private String dados;
     private long desvio;

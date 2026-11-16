@@ -34,4 +34,8 @@ public class Relogio {
     public synchronized void definir(long hora) {
         deslocamento = hora - System.currentTimeMillis();
     }
+
+    public synchronized void ajustar(long diferenca) {
+        deslocamento += diferenca;
+    }
 }
