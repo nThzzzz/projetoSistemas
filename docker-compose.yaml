@@ -43,7 +43,7 @@ services:
       DATA_DIR: /data
       CLOCK_DRIFT_MS: -1500
     volumes:
-      - ./dados/servidor-1:/data
+      - ${DADOS:-./dados}/servidor-1:/data
 
   servidor-2:
     <<: *servidor
@@ -56,7 +56,7 @@ services:
       DATA_DIR: /data
       CLOCK_DRIFT_MS: 2500
     volumes:
-      - ./dados/servidor-2:/data
+      - ${DADOS:-./dados}/servidor-2:/data
 
   bot-1:
     <<: *bot
