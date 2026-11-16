@@ -10,21 +10,23 @@ servidor/   servidor em Java (Spring Boot)
 bot/        cliente (bot) em Python
 broker/     broker REQ-REP em Python
 proxy/      proxy PUB-SUB em Python
+referencia/ serviço de referência em Python
 ```
 
 ## Linguagens
 
 - **Java (Spring Boot)**: servidor
-- **Python**: bot, broker e proxy
+- **Python**: bot, broker, proxy e serviço de referência
 
 ## Serialização
 
-As mensagens são serializadas em binário com Protocol Buffers (`proto/messages.proto`). Toda mensagem é enviada dentro de um `Envelope`, que possui um `Header` com o id da mensagem, o remetente e o timestamp do envio.
+As mensagens são serializadas em binário com Protocol Buffers (`proto/messages.proto`). Toda mensagem é enviada dentro de um `Envelope`, que possui um `Header` com o id da mensagem, o remetente, o timestamp do envio e o relógio lógico (`lamport`) de quem envia.
 
 ## Comunicação
 
 - `broker`: ROUTER na porta 5555 (clientes) e DEALER na porta 5556 (servidores)
 - `proxy`: XSUB na porta 5557 (servidores publicam) e XPUB na porta 5558 (bots se inscrevem)
+- `referencia`: REP na porta 5559 (somente servidores)
 
 | Requisição | Resposta | Erros possíveis |
 |---|---|---|
@@ -66,6 +68,28 @@ O servidor não confere se o canal existe antes de publicar: como o broker distr
 6. volta para o passo 2
 
 Enquanto espera o intervalo entre as mensagens, o bot exibe as publicações recebidas nos canais em que está inscrito, com o canal, a mensagem, o horário do envio e o horário do recebimento.
+
+## Relógios e serviço de referência
+
+### Relógio lógico
+
+Bots, servidores e o serviço de referência mantêm um contador de Lamport que começa em 0. Antes de cada envio (requisição, resposta ou publicação), o contador é incrementado e enviado no campo `lamport` do header. Ao receber uma mensagem, o processo passa a usar o maior valor entre o seu contador e o recebido.
+
+### Serviço de referência
+
+| Requisição | Resposta | Uso |
+|---|---|---|
+| `RankReq` (nome no `remetente`) | `RankRep` com o rank | enviado pelo servidor ao iniciar |
+| `ListarServidoresReq` | `ListarServidoresRep` com nome e rank | lista dos servidores disponíveis |
+| `HeartbeatReq` (nome no `remetente`) | `HeartbeatRep` com a hora correta | a cada 10 mensagens de clientes |
+
+- o rank é sequencial (1, 2, 3...) na ordem do primeiro contato e não muda se o mesmo nome se cadastrar de novo
+- um servidor que fica 30 segundos sem enviar heartbeat é removido da lista de disponíveis e volta a ela no próximo heartbeat
+- ao receber a resposta do heartbeat, o servidor ajusta o seu relógio físico para a hora enviada pela referência
+
+Para que a sincronização apareça na execução, o compose inicia os servidores com relógios desajustados (`CLOCK_DRIFT_MS`: -1500 ms no `servidor-1` e +2500 ms no `servidor-2`). O log `[relogio] ajuste de N ms` mostra a correção aplicada em cada heartbeat.
+
+As requisições do servidor para a referência usam um tempo limite de 2 segundos: sem resposta, o servidor segue atendendo os clientes e tenta de novo no próximo heartbeat.
 
 ## Persistência
 
