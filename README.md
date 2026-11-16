@@ -40,7 +40,7 @@ Os dados de cada servidor ficam em `dados/servidor-N/`.
 
 ## Escolhas
 
-- **Linguagens:** Java no servidor e Python no bot e nos serviços auxiliares.
+- **Linguagens:** Java com Spring Boot no servidor e Python no bot e nos serviços auxiliares. O Spring Boot é usado para organizar o servidor (injeção de dependências, configuração por variáveis de ambiente e validação dos dados); a comunicação é toda feita com ZeroMQ, sem HTTP.
 - **Serialização:** Protocol Buffers (`proto/messages.proto`), em binário. Toda mensagem vai num `Envelope` com um cabeçalho que tem o id da mensagem, o remetente, o timestamp do envio e o relógio lógico.
 - **Persistência:** cada servidor grava arquivos JSON Lines (um registro por linha): `logins.jsonl`, `canais.jsonl` e `publicacoes.jsonl`, sempre com o timestamp de cada registro.
 
