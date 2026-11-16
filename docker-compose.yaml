@@ -71,3 +71,13 @@ services:
       BOT_NAME: bot-2
       BROKER_ADDR: tcp://broker:5555
       PROXY_ADDR: tcp://proxy:5558
+
+  monitor:
+    build:
+      context: .
+      dockerfile: monitor/Dockerfile
+    image: bbs-monitor
+    depends_on:
+      - proxy
+    environment:
+      PROXY_ADDR: tcp://proxy:5558
