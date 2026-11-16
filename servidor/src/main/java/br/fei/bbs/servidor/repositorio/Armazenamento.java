@@ -3,6 +3,7 @@ package br.fei.bbs.servidor.repositorio;
 import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.modelo.Canal;
 import br.fei.bbs.servidor.modelo.Login;
+import br.fei.bbs.servidor.modelo.Publicacao;
 import com.google.gson.Gson;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ public class Armazenamento {
 
     private Path logins;
     private Path canais;
+    private Path publicacoes;
 
     @PostConstruct
     void iniciar() throws IOException {
@@ -37,6 +39,7 @@ public class Armazenamento {
         Files.createDirectories(diretorio);
         logins = diretorio.resolve("logins.jsonl");
         canais = diretorio.resolve("canais.jsonl");
+        publicacoes = diretorio.resolve("publicacoes.jsonl");
     }
 
     public synchronized void salvarLogin(@Valid Login login) throws IOException {
@@ -47,12 +50,20 @@ public class Armazenamento {
         anexar(canais, canal);
     }
 
+    public synchronized void salvarPublicacao(@Valid Publicacao publicacao) throws IOException {
+        anexar(publicacoes, publicacao);
+    }
+
     public List<Login> carregarLogins() throws IOException {
         return ler(logins, Login.class);
     }
 
     public List<Canal> carregarCanais() throws IOException {
         return ler(canais, Canal.class);
+    }
+
+    public List<Publicacao> carregarPublicacoes() throws IOException {
+        return ler(publicacoes, Publicacao.class);
     }
 
     private void anexar(Path arquivo, Object registro) throws IOException {
