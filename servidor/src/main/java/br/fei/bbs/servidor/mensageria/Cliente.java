@@ -58,7 +58,7 @@ public class Cliente {
     }
 
     private ZMQ.Socket conectar(String endereco) {
-        ZMQ.Socket socket = contexto.createSocket(SocketType.REQ);
+        ZMQ.Socket socket = Sockets.criar(contexto, SocketType.REQ);
         socket.setReceiveTimeOut(TEMPO_LIMITE_MS);
         socket.setLinger(0);
         try {

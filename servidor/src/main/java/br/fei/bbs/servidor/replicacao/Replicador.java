@@ -10,6 +10,7 @@ import br.fei.bbs.servidor.coordenacao.Referencia;
 import br.fei.bbs.servidor.mensageria.Cliente;
 import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
+import br.fei.bbs.servidor.mensageria.Sockets;
 import br.fei.bbs.servidor.modelo.Canal;
 import br.fei.bbs.servidor.modelo.Login;
 import br.fei.bbs.servidor.modelo.Publicacao;
@@ -145,7 +146,7 @@ public class Replicador implements Runnable {
     @Override
     public void run() {
         try (ZContext contexto = new ZContext()) {
-            ZMQ.Socket sub = contexto.createSocket(SocketType.SUB);
+            ZMQ.Socket sub = Sockets.criar(contexto, SocketType.SUB);
             sub.connect(propriedades.getProxySub());
             sub.subscribe(TOPICO.getBytes());
 

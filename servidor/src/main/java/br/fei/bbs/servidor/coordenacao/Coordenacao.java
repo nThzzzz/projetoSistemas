@@ -13,6 +13,7 @@ import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.mensageria.Cliente;
 import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
+import br.fei.bbs.servidor.mensageria.Sockets;
 import br.fei.bbs.servidor.relogio.Relogio;
 import br.fei.bbs.servidor.replicacao.Replicador;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -115,9 +116,9 @@ public class Coordenacao implements Runnable {
     @Override
     public void run() {
         try (ZContext contexto = new ZContext()) {
-            ZMQ.Socket rep = contexto.createSocket(SocketType.REP);
+            ZMQ.Socket rep = Sockets.criar(contexto, SocketType.REP);
             rep.bind("tcp://*:" + propriedades.getPorta());
-            ZMQ.Socket sub = contexto.createSocket(SocketType.SUB);
+            ZMQ.Socket sub = Sockets.criar(contexto, SocketType.SUB);
             sub.connect(propriedades.getProxySub());
             sub.subscribe(TOPICO.getBytes());
             ZMQ.Poller poller = contexto.createPoller(2);

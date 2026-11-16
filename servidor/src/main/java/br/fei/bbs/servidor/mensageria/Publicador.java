@@ -22,7 +22,7 @@ public class Publicador {
     @PostConstruct
     void iniciar() {
         contexto = new ZContext();
-        socket = contexto.createSocket(SocketType.PUB);
+        socket = Sockets.criar(contexto, SocketType.PUB);
         socket.connect(propriedades.getProxy());
     }
 

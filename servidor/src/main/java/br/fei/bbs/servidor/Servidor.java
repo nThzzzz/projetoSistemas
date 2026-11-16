@@ -14,6 +14,7 @@ import br.fei.bbs.servidor.coordenacao.Referencia;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
 import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
+import br.fei.bbs.servidor.mensageria.Sockets;
 import br.fei.bbs.servidor.replicacao.Replicador;
 import br.fei.bbs.servidor.servico.CanalServico;
 import br.fei.bbs.servidor.servico.LoginServico;
@@ -70,7 +71,7 @@ public class Servidor implements CommandLineRunner {
         replicador.sincronizar();
         coordenacao.sincronizar();
         try (ZContext contexto = new ZContext()) {
-            ZMQ.Socket socket = contexto.createSocket(SocketType.REP);
+            ZMQ.Socket socket = Sockets.criar(contexto, SocketType.REP);
             socket.connect(propriedades.getBroker());
             System.out.println(propriedades.getNome() + " conectado em " + propriedades.getBroker());
 
