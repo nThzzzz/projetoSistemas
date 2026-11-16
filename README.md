@@ -27,6 +27,7 @@ As mensagens são serializadas em binário com Protocol Buffers (`proto/messages
 - `broker`: ROUTER na porta 5555 (clientes) e DEALER na porta 5556 (servidores)
 - `proxy`: XSUB na porta 5557 (servidores publicam) e XPUB na porta 5558 (bots se inscrevem)
 - `referencia`: REP na porta 5559 (somente servidores)
+- cada servidor: REP na porta 5560 para mensagens de outros servidores (relógio e eleição) e SUB no tópico `servers` do proxy
 
 | Requisição | Resposta | Erros possíveis |
 |---|---|---|
@@ -81,15 +82,52 @@ Bots, servidores e o serviço de referência mantêm um contador de Lamport que 
 |---|---|---|
 | `RankReq` (nome no `remetente`) | `RankRep` com o rank | enviado pelo servidor ao iniciar |
 | `ListarServidoresReq` | `ListarServidoresRep` com nome e rank | lista dos servidores disponíveis |
-| `HeartbeatReq` (nome no `remetente`) | `HeartbeatRep` com a hora correta | a cada 10 mensagens de clientes |
+| `HeartbeatReq` (nome no `remetente`) | `HeartbeatRep` com `OK` | a cada 10 mensagens de clientes |
 
 - o rank é sequencial (1, 2, 3...) na ordem do primeiro contato e não muda se o mesmo nome se cadastrar de novo
 - um servidor que fica 30 segundos sem enviar heartbeat é removido da lista de disponíveis e volta a ela no próximo heartbeat
-- ao receber a resposta do heartbeat, o servidor ajusta o seu relógio físico para a hora enviada pela referência
 
-Para que a sincronização apareça na execução, o compose inicia os servidores com relógios desajustados (`CLOCK_DRIFT_MS`: -1500 ms no `servidor-1` e +2500 ms no `servidor-2`). O log `[relogio] ajuste de N ms` mostra a correção aplicada em cada heartbeat.
+### Coordenador e sincronização do relógio físico (Berkeley)
 
-As requisições do servidor para a referência usam um tempo limite de 2 segundos: sem resposta, o servidor segue atendendo os clientes e tenta de novo no próximo heartbeat.
+A cada 15 mensagens de clientes, o servidor pede a hora ao coordenador:
+
+```mermaid
+sequenceDiagram
+  Servidor ->> Coordenador: REQ: RelogioReq (hora do servidor no header)
+  Coordenador ->> Servidor: REP: RelogioRep (hora correta)
+```
+
+O coordenador aplica o algoritmo de Berkeley usando a hora que vem no header de cada pedido:
+
+1. guarda a diferença entre a hora do servidor e a sua
+2. calcula a média das diferenças de todos os servidores ativos, contando a dele como 0
+3. ajusta o próprio relógio pela média e responde com a nova hora, que o servidor passa a usar
+
+Assim, todos os relógios convergem para a média, e não para o relógio de um único processo. Para que a sincronização apareça na execução, o compose inicia os servidores com relógios desajustados (`CLOCK_DRIFT_MS`: -1500 ms no `servidor-1` e +2500 ms no `servidor-2`). Os logs `[berkeley] media de N ms` (no coordenador) e `[relogio] ajuste de N ms` (nos demais) mostram as correções.
+
+### Eleição (algoritmo do valentão)
+
+O coordenador é o servidor disponível com o maior rank. Uma eleição começa quando o servidor inicia, quando o coordenador não responde ao pedido de relógio ou quando chega um pedido de eleição:
+
+```mermaid
+sequenceDiagram
+  Servidor A ->> Servidor B: REQ: EleicaoReq (somente para ranks maiores)
+  Servidor B ->> Servidor A: REP: EleicaoRep OK
+  Servidor B ->> PUB: [servers] Coordenador (nome e rank)
+```
+
+- o servidor envia `EleicaoReq` para todos os servidores da lista com rank maior que o seu
+- quem recebe responde `OK` e inicia a sua própria eleição
+- se ninguém responder em 2 segundos, o servidor se declara coordenador e publica o seu nome e rank no tópico `servers`
+- todos os servidores guardam o nome anunciado em `servers`; se o anúncio vier de um rank menor que o seu, o servidor inicia uma nova eleição
+- o coordenador repete o anúncio a cada 15 mensagens, para que servidores que perderam o anúncio (por exemplo, ao reiniciar) fiquem sabendo
+
+As mensagens entre servidores são atendidas em uma thread separada, para que um servidor consiga responder outro mesmo enquanto espera uma resposta.
+
+### Tempo limite das requisições
+
+- requisições entre servidores e para a referência esperam até 2 segundos; sem resposta, o servidor segue atendendo os clientes e descarta o socket para criar outro na próxima tentativa
+- o bot espera até 10 segundos pela resposta; sem resposta (por exemplo, se o servidor que recebeu a requisição caiu), ele recria o socket e reenvia a requisição
 
 ## Persistência
 
