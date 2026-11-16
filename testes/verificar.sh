@@ -60,6 +60,16 @@ e_coordenador() {
     [ "$(coordenador_de "$1")" = "$2" ]
 }
 
+inscricoes_ok() {
+    local total
+    total=$(logs "$1" | grep -c '^\[inscrito em')
+    [ "$total" -ge 1 ] && [ "$total" -le 3 ]
+}
+
+canais_suficientes() {
+    [ "$(grep -o '"nome":"[^"]*"' "$DADOS/servidor-1/canais.jsonl" | sort -u | wc -l)" -ge 5 ]
+}
+
 recuperou_historico() {
     logs "$1" | grep '^\[replicacao\]' | tail -1 | grep -qE '^\[replicacao\] [1-9][0-9]* registros novos'
 }
@@ -112,12 +122,16 @@ echo "Partes 1 a 3: logs e arquivos"
 verificar "logins dos bots gravados com timestamp" grep -qE '"usuario":"bot-1","timestamp":[0-9]+' "$DADOS"/servidor-1/logins.jsonl
 verificar "canais gravados em disco" test -s "$DADOS/servidor-1/canais.jsonl"
 verificar "publicacoes gravadas em disco" test -s "$DADOS/servidor-1/publicacoes.jsonl"
-verificar "bot se inscreve em canais" tem_log bot-1 '^\[inscrito em'
+verificar "bot-1 se inscreve em 1 a 3 canais" inscricoes_ok bot-1
+verificar "bot-2 se inscreve em 1 a 3 canais" inscricoes_ok bot-2
+verificar "bots criam canais ate existirem pelo menos 5" esperar_ate 30 canais_suficientes
 verificar "bot exibe canal, envio e recebimento das publicacoes" tem_log bot-1 '^\[publicacao em .* envio .* recebimento'
 verificar "mensagens do bot tem relogio logico" tem_log bot-1 'lamport: [0-9]+'
 verificar "referencia cadastrou servidor-1" tem_log referencia 'cadastrado\] servidor-1'
 verificar "referencia cadastrou servidor-2" tem_log referencia 'cadastrado\] servidor-2'
 verificar "servidores enviam heartbeat" tem_log servidor-1 'heartbeat_req'
+verificar "monitor exibe as publicacoes dos canais" tem_log monitor '#canal-'
+verificar "monitor exibe o coordenador" tem_log monitor 'novo coordenador'
 
 echo "Parte 4: eleicao e Berkeley"
 esperar_ate 60 tem_log servidor-1 '^\[(berkeley|relogio)\]'
@@ -131,6 +145,7 @@ dc stop "$COORDENADOR" >/dev/null 2>&1
 verificar "$OUTRO assume a coordenacao" esperar_ate 60 e_coordenador "$OUTRO" "$OUTRO"
 verificar "bot-1 continua sendo atendido" esperar_ate 20 recebendo bot-1
 verificar "bot-2 continua sendo atendido" esperar_ate 20 recebendo bot-2
+verificar "referencia remove $COORDENADOR por falta de heartbeat" esperar_ate 50 tem_log referencia "removido\] $COORDENADOR"
 
 echo "Parte 5: replicacao"
 echo "  ...religando $COORDENADOR"
