@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +25,13 @@ public class Cliente {
     private final Map<String, ZMQ.Socket> sockets = new HashMap<>();
 
     public Envelope requisitar(String endereco, Envelope.Builder pedido) {
-        ZMQ.Socket socket = sockets.computeIfAbsent(endereco, this::conectar);
+        ZMQ.Socket socket;
+        try {
+            socket = sockets.computeIfAbsent(endereco, this::conectar);
+        } catch (ZMQException e) {
+            System.out.println("[sem conexao com " + endereco + "] " + e.getMessage());
+            return null;
+        }
         Envelope envio = envelopes.finalizar(pedido);
         socket.send(envio.toByteArray(), 0);
         System.out.println("[enviado para " + endereco + "]\n" + envio);
@@ -47,8 +54,13 @@ public class Cliente {
         ZMQ.Socket socket = contexto.createSocket(SocketType.REQ);
         socket.setReceiveTimeOut(TEMPO_LIMITE_MS);
         socket.setLinger(0);
-        socket.connect(endereco);
-        return socket;
+        try {
+            socket.connect(endereco);
+            return socket;
+        } catch (ZMQException e) {
+            contexto.destroySocket(socket);
+            throw e;
+        }
     }
 
     @PreDestroy
