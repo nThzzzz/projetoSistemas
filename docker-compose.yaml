@@ -5,6 +5,7 @@ x-servidor: &servidor
   image: bbs-servidor
   depends_on:
     - broker
+    - proxy
 
 x-bot: &bot
   build:
@@ -28,6 +29,7 @@ services:
     environment:
       SERVER_NAME: servidor-1
       BROKER_ADDR: tcp://broker:5556
+      PROXY_ADDR: tcp://proxy:5557
       DATA_DIR: /data
     volumes:
       - ./dados/servidor-1:/data
@@ -37,6 +39,7 @@ services:
     environment:
       SERVER_NAME: servidor-2
       BROKER_ADDR: tcp://broker:5556
+      PROXY_ADDR: tcp://proxy:5557
       DATA_DIR: /data
     volumes:
       - ./dados/servidor-2:/data
