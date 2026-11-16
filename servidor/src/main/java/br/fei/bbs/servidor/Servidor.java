@@ -2,7 +2,6 @@ package br.fei.bbs.servidor;
 
 import br.fei.bbs.proto.CriarCanalRep;
 import br.fei.bbs.proto.Envelope;
-import br.fei.bbs.proto.Header;
 import br.fei.bbs.proto.ListarCanaisRep;
 import br.fei.bbs.proto.LoginRep;
 import br.fei.bbs.proto.Publicacao;
@@ -11,6 +10,7 @@ import br.fei.bbs.proto.PublicarReq;
 import br.fei.bbs.proto.Status;
 import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
+import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
 import br.fei.bbs.servidor.servico.CanalServico;
 import br.fei.bbs.servidor.servico.LoginServico;
@@ -22,8 +22,6 @@ import org.springframework.stereotype.Component;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
-
-import java.util.UUID;
 
 @Component
 public class Servidor implements CommandLineRunner {
@@ -44,6 +42,9 @@ public class Servidor implements CommandLineRunner {
     private Publicador publicador;
 
     @Autowired
+    private Envelopes envelopes;
+
+    @Autowired
     private TratadorDeExcecoes tratadorDeExcecoes;
 
     @Override
@@ -55,30 +56,31 @@ public class Servidor implements CommandLineRunner {
 
             while (!Thread.currentThread().isInterrupted()) {
                 byte[] dados = socket.recv(0);
-                Envelope resposta;
+                Envelope.Builder resposta;
                 try {
-                    Envelope requisicao = Envelope.parseFrom(dados);
+                    Envelope requisicao = envelopes.ler(dados);
                     System.out.println("[recebido]\n" + requisicao);
                     resposta = processar(requisicao);
                 } catch (InvalidProtocolBufferException e) {
-                    resposta = novoEnvelope().build();
+                    resposta = Envelope.newBuilder();
                 }
-                socket.send(resposta.toByteArray(), 0);
-                System.out.println("[enviado]\n" + resposta);
+                Envelope envio = envelopes.finalizar(resposta);
+                socket.send(envio.toByteArray(), 0);
+                System.out.println("[enviado]\n" + envio);
             }
         }
     }
 
-    private Envelope processar(Envelope requisicao) {
+    private Envelope.Builder processar(Envelope requisicao) {
         try {
             return tratar(requisicao);
         } catch (Exception e) {
-            return tratadorDeExcecoes.tratar(requisicao, e, novoEnvelope()).build();
+            return tratadorDeExcecoes.tratar(requisicao, e, Envelope.newBuilder());
         }
     }
 
-    private Envelope tratar(Envelope requisicao) throws Exception {
-        Envelope.Builder resposta = novoEnvelope();
+    private Envelope.Builder tratar(Envelope requisicao) throws Exception {
+        Envelope.Builder resposta = Envelope.newBuilder();
         switch (requisicao.getBodyCase()) {
             case LOGIN_REQ -> {
                 loginServico.entrar(requisicao.getHeader().getRemetente());
@@ -95,22 +97,16 @@ public class Servidor implements CommandLineRunner {
                 PublicarReq pedido = requisicao.getPublicarReq();
                 var registro = publicacaoServico.registrar(pedido.getCanal(), pedido.getMensagem(),
                         requisicao.getHeader().getRemetente());
-                publicador.publicar(registro.canal(), novoEnvelope().setPublicacao(Publicacao.newBuilder()
-                        .setCanal(registro.canal())
-                        .setMensagem(registro.mensagem())
-                        .setAutor(registro.autor())).build());
+                publicador.publicar(registro.canal(), envelopes.finalizar(Envelope.newBuilder()
+                        .setPublicacao(Publicacao.newBuilder()
+                                .setCanal(registro.canal())
+                                .setMensagem(registro.mensagem())
+                                .setAutor(registro.autor()))));
                 resposta.setPublicarRep(PublicarRep.newBuilder().setStatus(Status.OK));
             }
             default -> {
             }
         }
-        return resposta.build();
-    }
-
-    private Envelope.Builder novoEnvelope() {
-        return Envelope.newBuilder().setHeader(Header.newBuilder()
-                .setMsgId(UUID.randomUUID().toString())
-                .setRemetente(propriedades.getNome())
-                .setTsEnvioMs(System.currentTimeMillis()));
+        return resposta;
     }
 }

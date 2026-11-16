@@ -13,4 +13,5 @@ public class ServidorProperties {
     private String broker;
     private String proxy;
     private String dados;
+    private long desvio;
 }
