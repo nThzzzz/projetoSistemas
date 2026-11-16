@@ -184,3 +184,19 @@ docker compose up --build
 ```
 
 Nos primeiros segundos, algumas publicações podem não chegar aos bots: no ZeroMQ, o PUB descarta mensagens enviadas antes de a inscrição do SUB chegar até ele (*slow joiner*).
+
+## Verificação automática
+
+```
+./testes/verificar.sh
+```
+
+O script sobe todo o projeto em um ambiente separado (projeto `bbsteste`, dados em `testes/dados`), executa um cliente de teste dentro da rede do compose e verifica, parte por parte:
+
+- login, criação e listagem de canais, incluindo os erros
+- publicação e recebimento pelo pub/sub, com filtro por canal
+- relógio lógico, serviço de referência, heartbeat e Berkeley
+- eleição: derruba o coordenador, confere que outro assume e que os bots continuam sendo atendidos
+- replicação: religa o servidor derrubado, adiciona um `servidor-3` e confere que todos terminam com os mesmos dados
+
+Ao final, mostra quantas verificações passaram e salva os logs em `testes/logs`. Leva cerca de 2 minutos.
