@@ -9,6 +9,7 @@ import br.fei.bbs.proto.PublicarRep;
 import br.fei.bbs.proto.PublicarReq;
 import br.fei.bbs.proto.Status;
 import br.fei.bbs.servidor.config.ServidorProperties;
+import br.fei.bbs.servidor.coordenacao.Coordenacao;
 import br.fei.bbs.servidor.coordenacao.Referencia;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
 import br.fei.bbs.servidor.mensageria.Envelopes;
@@ -51,11 +52,16 @@ public class Servidor implements CommandLineRunner {
     @Autowired
     private Referencia referencia;
 
+    @Autowired
+    private Coordenacao coordenacao;
+
     private long mensagens;
 
     @Override
     public void run(String... args) {
         referencia.registrar();
+        coordenacao.iniciar();
+        coordenacao.sincronizar();
         try (ZContext contexto = new ZContext()) {
             ZMQ.Socket socket = contexto.createSocket(SocketType.REP);
             socket.connect(propriedades.getBroker());
@@ -77,6 +83,11 @@ public class Servidor implements CommandLineRunner {
                 if (++mensagens % 10 == 0) {
                     referencia.heartbeat();
                     referencia.listar();
+                }
+                if (mensagens % 15 == 0) {
+                    coordenacao.sincronizar();
+                } else {
+                    coordenacao.verificar();
                 }
             }
         }
