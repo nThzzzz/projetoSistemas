@@ -14,6 +14,7 @@ x-bot: &bot
   image: bbs-bot
   depends_on:
     - broker
+    - proxy
 
 services:
   broker:
@@ -49,9 +50,11 @@ services:
     environment:
       BOT_NAME: bot-1
       BROKER_ADDR: tcp://broker:5555
+      PROXY_ADDR: tcp://proxy:5558
 
   bot-2:
     <<: *bot
     environment:
       BOT_NAME: bot-2
       BROKER_ADDR: tcp://broker:5555
+      PROXY_ADDR: tcp://proxy:5558
