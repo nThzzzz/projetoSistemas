@@ -66,7 +66,6 @@ def tratar(requisicao):
     elif tipo == "heartbeat_req":
         registrar(nome)
         resposta.heartbeat_rep.status = pb.OK
-        resposta.heartbeat_rep.hora_ms = agora_ms()
     return resposta
 
 

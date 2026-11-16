@@ -7,7 +7,6 @@ import br.fei.bbs.proto.ListarServidoresReq;
 import br.fei.bbs.proto.RankReq;
 import br.fei.bbs.servidor.config.ServidorProperties;
 import br.fei.bbs.servidor.mensageria.Cliente;
-import br.fei.bbs.servidor.relogio.Relogio;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -22,9 +21,6 @@ public class Referencia {
 
     @Autowired
     private Cliente cliente;
-
-    @Autowired
-    private Relogio relogio;
 
     @Getter
     private volatile int rank;
@@ -44,13 +40,8 @@ public class Referencia {
     }
 
     public void heartbeat() {
-        Envelope resposta = cliente.requisitar(propriedades.getReferencia(),
+        cliente.requisitar(propriedades.getReferencia(),
                 Envelope.newBuilder().setHeartbeatReq(HeartbeatReq.getDefaultInstance()));
-        if (resposta != null) {
-            long hora = resposta.getHeartbeatRep().getHoraMs();
-            System.out.println("[relogio] ajuste de " + (hora - relogio.agora()) + " ms");
-            relogio.definir(hora);
-        }
     }
 
     public List<InfoServidor> listar() {
