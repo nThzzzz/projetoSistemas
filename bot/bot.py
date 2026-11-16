@@ -13,7 +13,10 @@ PROXY_ADDR = os.getenv("PROXY_ADDR", "tcp://proxy:5558")
 BOT_NAME = os.getenv("BOT_NAME", "bot")
 MINIMO_CANAIS = 5
 MAXIMO_INSCRICOES = 3
+TEMPO_LIMITE_MS = 10000
 lamport = 0
+contexto = zmq.Context()
+req = None
 PALAVRAS = ["ola", "mundo", "sistemas", "distribuidos", "zeromq", "canal", "bot", "mensagem", "teste", "servidor"]
 
 
@@ -44,40 +47,54 @@ def ler(dados):
     return envelope
 
 
-def requisitar(socket, envelope):
-    print(f"[enviado]\n{envelope}", flush=True)
-    socket.send(envelope.SerializeToString())
-    resposta = ler(socket.recv())
-    print(f"[recebido]\n{resposta}", flush=True)
-    return resposta
+def conectar():
+    global req
+    if req is not None:
+        req.close(linger=0)
+    req = contexto.socket(zmq.REQ)
+    req.setsockopt(zmq.RCVTIMEO, TEMPO_LIMITE_MS)
+    req.connect(BROKER_ADDR)
 
 
-def login(socket):
+def requisitar(envelope):
+    while True:
+        print(f"[enviado]\n{envelope}", flush=True)
+        req.send(envelope.SerializeToString())
+        try:
+            resposta = ler(req.recv())
+            print(f"[recebido]\n{resposta}", flush=True)
+            return resposta
+        except zmq.Again:
+            print("[sem resposta, reenviando]", flush=True)
+            conectar()
+
+
+def login():
     while True:
         envelope = novo_envelope()
         envelope.login_req.SetInParent()
-        if requisitar(socket, envelope).login_rep.status == pb.OK:
+        if requisitar(envelope).login_rep.status == pb.OK:
             return
         time.sleep(1)
 
 
-def listar_canais(socket):
+def listar_canais():
     envelope = novo_envelope()
     envelope.listar_canais_req.SetInParent()
-    return list(requisitar(socket, envelope).listar_canais_rep.canais)
+    return list(requisitar(envelope).listar_canais_rep.canais)
 
 
-def criar_canal(socket, nome):
+def criar_canal(nome):
     envelope = novo_envelope()
     envelope.criar_canal_req.canal = nome
-    return requisitar(socket, envelope).criar_canal_rep.status == pb.OK
+    return requisitar(envelope).criar_canal_rep.status == pb.OK
 
 
-def publicar(socket, canal, mensagem):
+def publicar(canal, mensagem):
     envelope = novo_envelope()
     envelope.publicar_req.canal = canal
     envelope.publicar_req.mensagem = mensagem
-    return requisitar(socket, envelope).publicar_rep.status == pb.OK
+    return requisitar(envelope).publicar_rep.status == pb.OK
 
 
 def inscrever(sub, inscritos, canal):
@@ -97,19 +114,17 @@ def receber(sub, inscritos, segundos):
 
 
 def main():
-    contexto = zmq.Context()
-    req = contexto.socket(zmq.REQ)
-    req.connect(BROKER_ADDR)
+    conectar()
     sub = contexto.socket(zmq.SUB)
     sub.connect(PROXY_ADDR)
     inscritos = set()
 
-    login(req)
+    login()
     while True:
-        canais = listar_canais(req)
+        canais = listar_canais()
         if len(canais) < MINIMO_CANAIS:
             nome = f"canal-{random.randint(1, 20)}"
-            if criar_canal(req, nome):
+            if criar_canal(nome):
                 canais.append(nome)
         if not canais:
             receber(sub, inscritos, 1)
@@ -119,7 +134,7 @@ def main():
             inscrever(sub, inscritos, random.choice(livres))
         canal = random.choice(canais)
         for _ in range(10):
-            publicar(req, canal, " ".join(random.choices(PALAVRAS, k=4)))
+            publicar(canal, " ".join(random.choices(PALAVRAS, k=4)))
             receber(sub, inscritos, 1)
 
 
