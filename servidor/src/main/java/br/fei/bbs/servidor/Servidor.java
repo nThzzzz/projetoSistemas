@@ -14,6 +14,7 @@ import br.fei.bbs.servidor.coordenacao.Referencia;
 import br.fei.bbs.servidor.erro.TratadorDeExcecoes;
 import br.fei.bbs.servidor.mensageria.Envelopes;
 import br.fei.bbs.servidor.mensageria.Publicador;
+import br.fei.bbs.servidor.replicacao.Replicador;
 import br.fei.bbs.servidor.servico.CanalServico;
 import br.fei.bbs.servidor.servico.LoginServico;
 import br.fei.bbs.servidor.servico.PublicacaoServico;
@@ -55,12 +56,16 @@ public class Servidor implements CommandLineRunner {
     @Autowired
     private Coordenacao coordenacao;
 
+    @Autowired
+    private Replicador replicador;
+
     private long mensagens;
 
     @Override
     public void run(String... args) {
         referencia.registrar();
         coordenacao.iniciar();
+        replicador.iniciar();
         coordenacao.sincronizar();
         try (ZContext contexto = new ZContext()) {
             ZMQ.Socket socket = contexto.createSocket(SocketType.REP);
