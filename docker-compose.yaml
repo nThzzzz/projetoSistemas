@@ -25,6 +25,12 @@ services:
     build: ./proxy
     image: bbs-proxy
 
+  referencia:
+    build:
+      context: .
+      dockerfile: referencia/Dockerfile
+    image: bbs-referencia
+
   servidor-1:
     <<: *servidor
     environment:
