@@ -27,6 +27,8 @@ Se o comando `docker compose` não existir, use `docker-compose`.
 
 Os dados de cada servidor ficam em `dados/servidor-N/`.
 
+O resultado dos testes fica em `testes/logs/`, com um arquivo por tema (`01-login-e-canais.log`, `02-publicacao.log`, `03-sincronizacao.log`, `04-eleicao.log` e `05-replicacao.log`), cada um com as verificações e os eventos daquele tema em ordem de horário.
+
 ## Serviços
 
 | Serviço | Linguagem | Função | Portas |
