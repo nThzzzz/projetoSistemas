@@ -21,20 +21,27 @@ services:
   broker:
     build: ./broker
     image: bbs-broker
+    environment:
+      TZ: America/Sao_Paulo
 
   proxy:
     build: ./proxy
     image: bbs-proxy
+    environment:
+      TZ: America/Sao_Paulo
 
   referencia:
     build:
       context: .
       dockerfile: referencia/Dockerfile
     image: bbs-referencia
+    environment:
+      TZ: America/Sao_Paulo
 
   servidor-1:
     <<: *servidor
     environment:
+      TZ: America/Sao_Paulo
       SERVER_NAME: servidor-1
       BROKER_ADDR: tcp://broker:5556
       PROXY_ADDR: tcp://proxy:5557
@@ -48,6 +55,7 @@ services:
   servidor-2:
     <<: *servidor
     environment:
+      TZ: America/Sao_Paulo
       SERVER_NAME: servidor-2
       BROKER_ADDR: tcp://broker:5556
       PROXY_ADDR: tcp://proxy:5557
@@ -61,6 +69,7 @@ services:
   bot-1:
     <<: *bot
     environment:
+      TZ: America/Sao_Paulo
       BOT_NAME: bot-1
       BROKER_ADDR: tcp://broker:5555
       PROXY_ADDR: tcp://proxy:5558
@@ -68,6 +77,7 @@ services:
   bot-2:
     <<: *bot
     environment:
+      TZ: America/Sao_Paulo
       BOT_NAME: bot-2
       BROKER_ADDR: tcp://broker:5555
       PROXY_ADDR: tcp://proxy:5558
@@ -80,4 +90,5 @@ services:
     depends_on:
       - proxy
     environment:
+      TZ: America/Sao_Paulo
       PROXY_ADDR: tcp://proxy:5558
